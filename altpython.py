@@ -2,7 +2,7 @@ import re
 import random
 import string
 
-def replace_syntax(src, replacer=lambda s: s, str_replacer=lambda s: s):
+def replace_syntax(src, replacer=lambda s: s, str_replacer=lambda s: s, strip_comments=True):
 	"""
 	Given a Python code, strips all strings and comments, runs the given
 	replacer function, and reinserts the strings and comments again.
@@ -23,9 +23,12 @@ def replace_syntax(src, replacer=lambda s: s, str_replacer=lambda s: s):
 		replaced_strings[id] = str_replacer(match.group())
 		return id
 
-	string_pattern = r'r?u?("""|\'\'\'|\'|").*?(?<!\\)\2'
-	comment_pattern = r'#[^\n]*'
-	full_pattern = '({})|({})'.format(string_pattern, comment_pattern)
+	string_pattern = r'(r?u?("""|\'\'\'|\'|").*?(?<!\\)\2)'
+	if strip_comments:
+		comment_pattern = r'(#[^\n]*)'
+		full_pattern = string_pattern + '|' + comment_pattern
+	else:
+		full_pattern = string_pattern
 	
 	# Use DOTALL for multi-line strings. Technically multi-line strings
 	# require triple-quotes, but we assume the source code is syntactially
@@ -41,4 +44,11 @@ def replace_syntax(src, replacer=lambda s: s, str_replacer=lambda s: s):
 
 if __name__ == '__main__':
 	print_and_return = lambda s: print(s) or s
-	print(replace_syntax(open(__file__).read(), str.upper, print_and_return))
+	#print(replace_syntax(open(__file__).read(), str.upper, print_and_return))
+	def replace(string):
+		match = re.match(r'#(\d+)(.*)', string, re.DOTALL)
+		if match:
+			return 'context[{}]{}'.format(match.group(1), match.group(2))
+		else:
+			return string
+	print(replace_syntax('#10', str_replacer=replace))
